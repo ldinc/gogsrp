@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 )
 
 func gen(n, prob int) (*big.Int, *big.Int, *big.Int) {
@@ -34,32 +35,27 @@ func gen(n, prob int) (*big.Int, *big.Int, *big.Int) {
 	return nil, nil, nil
 }
 
-var mutex = &sync.Mutex{}
-
-func printPrimes(n, prob int) {
-	fmt.Println("start...")
-	p, q, g := gen(n, prob)
-	mutex.Lock()
-	fmt.Println("p = ", p)
-	fmt.Println("q = ", q)
-	fmt.Println("g = ", g)
-	mutex.Unlock()
+func timeTrack(start time.Time, msg string) {
+	elapsed := time.Since(start)
+	fmt.Printf("> %s: %s\n", msg, elapsed)
 }
 
 func main() {
 
+	mutex := &sync.Mutex{}
 	result := make(chan *big.Int)
 	threads := 4
 
 	for i := 0; i < threads; i++ {
-		go func() {
-			p, q, g := gen(1024, 64)
+		go func(n int) {
+			defer timeTrack(time.Now(), fmt.Sprintf("gen %d", n))
+			p, q, g := gen(2048, 64)
 			mutex.Lock()
 			result <- p
 			result <- q
 			result <- g
 			mutex.Unlock()
-		}()
+		}(i)
 	}
 	for i := 0; i < threads; i++ {
 		fmt.Println("p = ", <-result)
