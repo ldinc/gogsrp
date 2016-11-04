@@ -2,8 +2,8 @@ package gogsrp
 
 import "crypto/rand"
 
-func ReadRand(n int) ([]byte, error) {
-	bytes := make([]byte, n)
+func ReadRand(bytes int) ([]byte, error) {
+	buffer := make([]byte, bytes)
 	_, err := rand.Read(bytes)
-	return bytes, err
+	return buffer, err
 }
