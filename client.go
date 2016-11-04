@@ -59,6 +59,52 @@ func (client *Client) CreateVerifier(login, passw []byte) ([]byte, *big.Int, err
 	return salt, verifier, nil
 }
 
+// The premaster secret is calculated by client.
+// N, g, salt, serverPublic (B) gains from server
+//
+func (client *Client) CreatePremasterSecret(login, passw []byte, serverPK *big.Int, salt []byte) {
+	clientSK := big.NewInt(1111)
+	clientPK := new(big.Int)
+	clientPK = clientPK.Exp(client.g, clientSK, client.N)
+	fmt.Println("client public key = ", clientPK)
+	// test code above...
+	hash := client.hash.New()
+	hash.Write(clientPK.Bytes())
+	hash.Write(serverPK.Bytes())
+	u := new(big.Int)
+	u.SetBytes(hash.Sum(nil))
+	hash = client.hash.New()
+	hash.Write(client.N.Bytes())
+	hash.Write(client.g.Bytes())
+	k := new(big.Int)
+	k.SetBytes(hash.Sum(nil))
+	hash = client.hash.New()
+	hash.Write(login)
+	hash.Write([]byte(":"))
+	hash.Write(passw)
+	id := hash.Sum(nil)
+	hash = client.hash.New()
+	hash.Write(salt)
+	hash.Write(id)
+	hashedSaltedId := hash.Sum(nil)
+	x := new(big.Int)
+	x.SetBytes(hashedSaltedId)
+	fmt.Println("test x = ", x)
+	z := new(big.Int)
+	z = z.Exp(client.g, x, client.N)
+	t := new(big.Int)
+	t = t.Mul(k, z)
+	z = z.Sub(serverPK, t)
+	t = t.Mul(u, x)
+	y := new(big.Int)
+	y = y.Add(clientSK, t)
+	t = t.Mod(y, client.N)
+	premasterSecret := new(big.Int)
+	premasterSecret = premasterSecret.Exp(z, t, client.N)
+	fmt.Println("client premaster secret = ", premasterSecret)
+
+}
+
 func (client *Client) Info() string {
 	res := fmt.Sprintf("g:%s\nn:%s\n", client.g, client.N)
 	return res
