@@ -2,7 +2,7 @@ package gogsrp
 
 import (
 	"fmt"
-	//"hash"
+	"hash"
 	"math/big"
 )
 
@@ -10,14 +10,14 @@ type Client struct {
 	g          *big.Int
 	N          *big.Int
 	saltLength int
-	hash       RenewableHash
+	newHash    func() hash.Hash
 }
 
-func CreateClient(g, N *big.Int, saltLength int, hash RenewableHash) *Client {
+func CreateClient(g, N *big.Int, saltLength int, newHash func() hash.Hash) *Client {
 	client := new(Client)
 	client.g = g
 	client.N = N
-	client.hash = hash
+	client.newHash = newHash
 	client.saltLength = saltLength
 
 	return client
@@ -34,7 +34,7 @@ func (client *Client) GetRegisterData(login, passw []byte) ([]byte, []byte, *big
 // default rfc 5054 H = SHA1(...)
 // return salt and verifier
 func (client *Client) CreateVerifier(login, passw []byte) ([]byte, *big.Int, error) {
-	id := client.hash.New()
+	id := client.newHash()
 	id.Write(login)
 	id.Write([]byte(":"))
 	id.Write(passw)
@@ -47,7 +47,7 @@ func (client *Client) CreateVerifier(login, passw []byte) ([]byte, *big.Int, err
 	}
 	fmt.Printf("salt = %x\n", salt)
 	fmt.Printf("salt str = [%s]\n", string(salt))
-	hash := client.hash.New()
+	hash := client.newHash()
 	hash.Write(salt)
 	hash.Write(hashedId)
 	hashedSaltedId := hash.Sum(nil)
@@ -68,22 +68,22 @@ func (client *Client) CreatePremasterSecret(login, passw []byte, serverPK *big.I
 	clientPK = clientPK.Exp(client.g, clientSK, client.N)
 	fmt.Println("client public key = ", clientPK)
 	// test code above...
-	hash := client.hash.New()
+	hash := client.newHash()
 	hash.Write(clientPK.Bytes())
 	hash.Write(serverPK.Bytes())
 	u := new(big.Int)
 	u.SetBytes(hash.Sum(nil))
-	hash = client.hash.New()
+	hash = client.newHash()
 	hash.Write(client.N.Bytes())
 	hash.Write(client.g.Bytes())
 	k := new(big.Int)
 	k.SetBytes(hash.Sum(nil))
-	hash = client.hash.New()
+	hash = client.newHash()
 	hash.Write(login)
 	hash.Write([]byte(":"))
 	hash.Write(passw)
 	id := hash.Sum(nil)
-	hash = client.hash.New()
+	hash = client.newHash()
 	hash.Write(salt)
 	hash.Write(id)
 	hashedSaltedId := hash.Sum(nil)

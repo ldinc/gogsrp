@@ -2,6 +2,7 @@ package gogsrp
 
 import (
 	"fmt"
+	"hash"
 	"math/big"
 )
 
@@ -9,14 +10,14 @@ type Server struct {
 	g            *big.Int
 	N            *big.Int
 	randomLength int
-	hash         RenewableHash
+	newHash      func() hash.Hash
 }
 
-func CreateServer(g, N *big.Int, randomLength int, hash RenewableHash) *Server {
+func CreateServer(g, N *big.Int, randomLength int, newHash func() hash.Hash) *Server {
 	server := new(Server)
 	server.g = g
 	server.N = N
-	server.hash = hash
+	server.newHash = newHash
 	server.randomLength = randomLength
 
 	return server
@@ -31,7 +32,7 @@ func (server *Server) CreatePremasterSecret(verifier, clientPub *big.Int) *big.I
 	}
 	serverPriv := new(big.Int)
 	serverPriv = serverPriv.SetBytes(rnd)
-	khash := server.hash.New()
+	khash := server.newHash()
 	khash.Write(server.N.Bytes())
 	khash.Write(server.g.Bytes())
 	hash := khash.Sum(nil)
@@ -46,7 +47,7 @@ func (server *Server) CreatePremasterSecret(verifier, clientPub *big.Int) *big.I
 	serverPub = serverPub.Add(z, t)
 	fmt.Println("server public key = ", serverPub)
 	// u = H(pad(A) | pad(b))
-	uhash := server.hash.New()
+	uhash := server.newHash()
 	uhash.Write(clientPub.Bytes())
 	uhash.Write(serverPub.Bytes())
 	ubytes := uhash.Sum(nil)
