@@ -1,4 +1,4 @@
-package gogrsp
+package gogsrp
 
 /*import (*/
 ////"crypto/rand"
