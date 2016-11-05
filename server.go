@@ -10,6 +10,7 @@ type Server struct {
 	g            *big.Int
 	N            *big.Int
 	randomLength int
+	saltLen      uint
 	newHash      func() hash.Hash
 }
 
@@ -19,14 +20,19 @@ func CreateServer(g, N *big.Int, randomLength int, newHash func() hash.Hash) *Se
 	server.N = N
 	server.newHash = newHash
 	server.randomLength = randomLength
+	server.saltLen = 32
 
 	return server
+}
+
+func (server *Server) NewSalt() ([]byte, error) {
+	return ReadRand(server.saltLen)
 }
 
 // k = H(N | pad(g))
 // TODO: pad(g) to 256 bit
 func (server *Server) CreatePremasterSecret(verifier, clientPub *big.Int) *big.Int {
-	rnd, err := ReadRand(server.randomLength)
+	rnd, err := ReadRand(uint(server.randomLength))
 	if err != nil {
 
 	}

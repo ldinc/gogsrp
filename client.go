@@ -41,7 +41,7 @@ func (client *Client) CreateVerifier(login, passw []byte) ([]byte, *big.Int, err
 	hashedId := id.Sum(nil)
 	fmt.Printf("hashed id = %x\n", hashedId)
 	fmt.Printf("hashed id as string = [%s]\n", string(hashedId))
-	salt, err := ReadRand(client.saltLength)
+	salt, err := ReadRand(uint(client.saltLength))
 	if err != nil {
 		return nil, nil, err
 	}
