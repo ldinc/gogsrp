@@ -1,7 +1,6 @@
 package gogsrp
 
 import (
-	"fmt"
 	"hash"
 	"math/big"
 )
@@ -10,6 +9,8 @@ type Client struct {
 	g          *big.Int
 	N          *big.Int
 	saltLength int
+	saltLen    uint
+	keyLen     uint
 	newHash    func() hash.Hash
 }
 
@@ -19,13 +20,10 @@ func CreateClient(g, N *big.Int, saltLength int, newHash func() hash.Hash) *Clie
 	client.N = N
 	client.newHash = newHash
 	client.saltLength = saltLength
+	client.saltLen = uint(saltLength)
+	client.keyLen = 32
 
 	return client
-}
-
-func (client *Client) GetRegisterData(login, passw []byte) ([]byte, []byte, *big.Int, error) {
-	salt, verifier, err := client.CreateVerifier(login, passw)
-	return login, salt, verifier, err
 }
 
 // SRP verifier creation
@@ -33,79 +31,69 @@ func (client *Client) GetRegisterData(login, passw []byte) ([]byte, []byte, *big
 // verifier = g^x % N
 // default rfc 5054 H = SHA1(...)
 // return salt and verifier
-func (client *Client) CreateVerifier(login, passw []byte) ([]byte, *big.Int, error) {
+func (client *Client) NewVerifier(login, passw []byte) ([]byte, *big.Int, error) {
+	salt, err := RandomBytes(client.saltLen)
+	if err != nil {
+		return nil, nil, err
+	}
+	x := client.computeHashedSaltedId(salt, login, passw)
+	verifier := new(big.Int)
+	verifier = verifier.Exp(client.g, x, client.N)
+	return salt, verifier, nil
+}
+
+func (client *Client) computeHashedSaltedId(salt, login, passw []byte) *big.Int {
 	id := client.newHash()
 	id.Write(login)
 	id.Write([]byte(":"))
 	id.Write(passw)
-	hashedId := id.Sum(nil)
-	fmt.Printf("hashed id = %x\n", hashedId)
-	fmt.Printf("hashed id as string = [%s]\n", string(hashedId))
-	salt, err := ReadRand(uint(client.saltLength))
-	if err != nil {
-		return nil, nil, err
-	}
-	fmt.Printf("salt = %x\n", salt)
-	fmt.Printf("salt str = [%s]\n", string(salt))
 	hash := client.newHash()
 	hash.Write(salt)
-	hash.Write(hashedId)
-	hashedSaltedId := hash.Sum(nil)
-	fmt.Printf("H(salt | H(login | \":\" | passw)) = %x\n", hashedSaltedId)
-	x := big.NewInt(0).SetBytes(hashedSaltedId)
-	verifier := new(big.Int)
-	verifier = verifier.Exp(client.g, x, client.N)
-	fmt.Println("g^x % N = ", verifier)
-	return salt, verifier, nil
-}
-
-// The premaster secret is calculated by client.
-// N, g, salt, serverPublic (B) gains from server
-//
-func (client *Client) CreatePremasterSecret(login, passw []byte, serverPK *big.Int, salt []byte) {
-	clientSK := big.NewInt(1111)
-	clientPK := new(big.Int)
-	clientPK = clientPK.Exp(client.g, clientSK, client.N)
-	fmt.Println("client public key = ", clientPK)
-	// test code above...
-	hash := client.newHash()
-	hash.Write(clientPK.Bytes())
-	hash.Write(serverPK.Bytes())
-	u := new(big.Int)
-	u.SetBytes(hash.Sum(nil))
-	hash = client.newHash()
-	hash.Write(client.N.Bytes())
-	hash.Write(client.g.Bytes())
-	k := new(big.Int)
-	k.SetBytes(hash.Sum(nil))
-	hash = client.newHash()
-	hash.Write(login)
-	hash.Write([]byte(":"))
-	hash.Write(passw)
-	id := hash.Sum(nil)
-	hash = client.newHash()
-	hash.Write(salt)
-	hash.Write(id)
-	hashedSaltedId := hash.Sum(nil)
+	hash.Write(id.Sum(nil))
 	x := new(big.Int)
-	x.SetBytes(hashedSaltedId)
-	fmt.Println("test x = ", x)
-	z := new(big.Int)
-	z = z.Exp(client.g, x, client.N)
-	t := new(big.Int)
-	t = t.Mul(k, z)
-	z = z.Sub(serverPK, t)
-	t = t.Mul(u, x)
-	y := new(big.Int)
-	y = y.Add(clientSK, t)
-	t = t.Mod(y, client.N)
-	premasterSecret := new(big.Int)
-	premasterSecret = premasterSecret.Exp(z, t, client.N)
-	fmt.Println("client premaster secret = ", premasterSecret)
-
+	x = x.SetBytes(hash.Sum(nil))
+	return x
 }
 
-func (client *Client) Info() string {
-	res := fmt.Sprintf("g:%s\nn:%s\n", client.g, client.N)
-	return res
+func (client *Client) NewPrivateKey() (*big.Int, error) {
+	rand, err := RandomBytes(client.keyLen)
+	if err != nil {
+		return nil, err
+	}
+	sk := new(big.Int)
+	sk = sk.SetBytes(rand)
+	return sk, nil
+}
+
+func (client *Client) NewPublicKey(sk *big.Int) (*big.Int, error) {
+	pk := new(big.Int)
+	pk = pk.Exp(client.g, sk, client.N)
+	return pk, nil
+}
+
+func (client *Client) GetPremasterSecret(clientPK, clientSK, serverPK *big.Int, salt, login, password []byte) *big.Int {
+	u, _ := CommonHash(clientPK, serverPK, client.newHash)
+	x := client.computeHashedSaltedId(salt, login, password)
+	y := new(big.Int)
+	y = y.Exp(client.g, x, client.N)
+
+	khash := client.newHash()
+	khash.Write(client.N.Bytes())
+	khash.Write(client.g.Bytes())
+	hash := khash.Sum(nil)
+	k := new(big.Int)
+	k = k.SetBytes(hash)
+
+	z := new(big.Int)
+	z = z.Mul(k, y)
+	b := new(big.Int)
+	b = b.Sub(serverPK, z)
+
+	y = y.Mul(u, x)
+	a := new(big.Int)
+	a = a.Add(clientSK, y)
+	secret := new(big.Int)
+	secret = secret.Exp(b, a, client.N)
+
+	return secret
 }

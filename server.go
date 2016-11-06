@@ -1,7 +1,6 @@
 package gogsrp
 
 import (
-	"fmt"
 	"hash"
 	"math/big"
 )
@@ -11,6 +10,7 @@ type Server struct {
 	N            *big.Int
 	randomLength int
 	saltLen      uint
+	keyLen       uint
 	newHash      func() hash.Hash
 }
 
@@ -21,48 +21,49 @@ func CreateServer(g, N *big.Int, randomLength int, newHash func() hash.Hash) *Se
 	server.newHash = newHash
 	server.randomLength = randomLength
 	server.saltLen = 32
+	server.keyLen = 32
 
 	return server
 }
 
 func (server *Server) NewSalt() ([]byte, error) {
-	return ReadRand(server.saltLen)
+	return RandomBytes(server.saltLen)
 }
 
-// k = H(N | pad(g))
-// TODO: pad(g) to 256 bit
-func (server *Server) CreatePremasterSecret(verifier, clientPub *big.Int) *big.Int {
-	rnd, err := ReadRand(uint(server.randomLength))
+func (server *Server) NewPrivateKey() (*big.Int, error) {
+	rnd, err := RandomBytes(server.keyLen)
 	if err != nil {
-
+		return nil, err
 	}
-	serverPriv := new(big.Int)
-	serverPriv = serverPriv.SetBytes(rnd)
-	khash := server.newHash()
-	khash.Write(server.N.Bytes())
-	khash.Write(server.g.Bytes())
-	hash := khash.Sum(nil)
+	sk := new(big.Int)
+	sk = sk.SetBytes(rnd)
+
+	return sk, nil
+}
+
+func (server *Server) NewPublicKey(sk, verifier *big.Int) (*big.Int, error) {
+	hash := server.newHash()
+	hash.Write(server.N.Bytes())
+	//TODO pad(g)
+	hash.Write(server.g.Bytes())
 	k := new(big.Int)
-	k = k.SetBytes(hash)
-	fmt.Println("k = ", k)
-	t := new(big.Int)
-	t = t.Exp(server.g, serverPriv, server.N)
-	z := new(big.Int)
-	z = z.Mul(k, verifier)
-	serverPub := new(big.Int)
-	serverPub = serverPub.Add(z, t)
-	fmt.Println("server public key = ", serverPub)
-	// u = H(pad(A) | pad(b))
-	uhash := server.newHash()
-	uhash.Write(clientPub.Bytes())
-	uhash.Write(serverPub.Bytes())
-	ubytes := uhash.Sum(nil)
-	u := new(big.Int)
-	u = u.SetBytes(ubytes)
-	t = t.Exp(verifier, u, server.N)
-	z = z.Mul(clientPub, t)
-	premasterSecret := new(big.Int)
-	premasterSecret = premasterSecret.Exp(z, serverPriv, server.N)
-	fmt.Println("server premaster secret = ", premasterSecret)
-	return serverPub
+	k = k.SetBytes(hash.Sum(nil))
+	y := new(big.Int)
+	y = y.Exp(server.g, sk, server.N)
+	x := new(big.Int)
+	x = x.Mul(k, verifier)
+	pk := new(big.Int)
+	pk = pk.Add(x, y)
+	return pk, nil
+}
+
+func (server *Server) GetPremasterSecret(clientPK, serverPK, serverSK, verifier *big.Int) *big.Int {
+	u, _ := CommonHash(clientPK, serverPK, server.newHash)
+	y := new(big.Int)
+	y = y.Exp(verifier, u, server.N)
+	x := new(big.Int)
+	x = x.Mul(clientPK, y)
+	secret := new(big.Int)
+	secret = secret.Exp(x, serverSK, server.N)
+	return secret
 }
