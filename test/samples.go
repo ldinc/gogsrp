@@ -134,3 +134,9 @@ var loginString string = "alice"
 var passwString string = "password123"
 var salt []byte = []byte{0xBE, 0xB2, 0x53, 0x79, 0xD1, 0xA8, 0x58, 0x1E,
 	0xB5, 0xA7, 0x27, 0x67, 0x3A, 0x24, 0x41, 0xEE}
+
+var aString string = "60975527035CF2AD1989806F0407210BC81EDC04E276" +
+	"2A56AFD529DDDA2D4393"
+
+var bString string = "E487CB59D31AC550471E81F00F6928E01DDA08E974A0" +
+	"04F49E61F5D105284D20"

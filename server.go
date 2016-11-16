@@ -45,7 +45,7 @@ func (server *Server) NewPublicKey(sk, verifier *big.Int) (*big.Int, error) {
 	hash := server.newHash()
 	hash.Write(server.N.Bytes())
 	//TODO pad(g)
-	hash.Write(Pad(server.g.Bytes()))
+	hash.Write(Pad(server.g.Bytes(), len(server.N.Bytes())))
 	k := new(big.Int)
 	k = k.SetBytes(hash.Sum(nil))
 	y := new(big.Int)
@@ -54,6 +54,8 @@ func (server *Server) NewPublicKey(sk, verifier *big.Int) (*big.Int, error) {
 	x = x.Mul(k, verifier)
 	pk := new(big.Int)
 	pk = pk.Add(x, y)
+	//TODO rem(pk, N)
+	pk = pk.Rem(pk, server.N)
 	return pk, nil
 }
 

@@ -79,7 +79,7 @@ func (client *Client) GetPremasterSecret(clientPK, clientSK, serverPK *big.Int, 
 
 	khash := client.newHash()
 	khash.Write(client.N.Bytes())
-	khash.Write(Pad(client.g.Bytes()))
+	khash.Write(Pad(client.g.Bytes(), len(client.N.Bytes())))
 	hash := khash.Sum(nil)
 	k := new(big.Int)
 	k = k.SetBytes(hash)
