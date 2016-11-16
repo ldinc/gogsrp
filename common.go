@@ -5,10 +5,20 @@ import (
 	"math/big"
 )
 
+func Pad(data []byte, length int) []byte {
+	n := len(data)
+	if n > length {
+		return data
+	}
+	padded := make([]byte, length)
+	copy(padded[length-n:], data)
+	return padded
+}
+
 func CommonHash(clientPK, serverPK *big.Int, newHash func() hash.Hash) (*big.Int, error) {
 	hash := newHash()
-	hash.Write(clientPK.Bytes())
-	hash.Write(serverPK.Bytes())
+	hash.Write(Pad(clientPK.Bytes()))
+	hash.Write(Pad(serverPK.Bytes()))
 	u := new(big.Int)
 	u = u.SetBytes(hash.Sum(nil))
 	return u, nil
