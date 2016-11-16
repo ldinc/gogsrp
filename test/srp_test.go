@@ -33,34 +33,14 @@ func Pad(buf, N []byte) []byte {
 	return b
 }
 
-/*func Pad(data []byte, bytes int) []byte {*/
-//n := len(data)
-//m := n % bytes
-//if m == 0 {
-//return data
-//}
-//fmt.Println("pad n =", n)
-//fmt.Println("pad m =", m)
-//fmt.Println("pad wait =", bytes)
-//fmt.Println("sum =", n+bytes-m)
-//padded := make([]byte, n+bytes-m)
-//copy(padded, data)
-//return padded
-/*}*/
-
 func ExampleComputeVerifierMultParam() {
 	N := new(big.Int)
 	N, _ = N.SetString(NString1024, 16)
-	fmt.Printf("N = %X\n", N.Bytes())
 	g := new(big.Int)
 	g, _ = g.SetString(gString1024, 16)
-	fmt.Printf("g = %X\n", g.Bytes())
-	//padg := Pad(g.Bytes(), sha1.BlockSize)
 	padg := Pad(g.Bytes(), N.Bytes())
-	fmt.Printf("Pad(g) = %X\n", padg)
 	khash := sha1.New()
 	khash.Write(N.Bytes())
-	//khash.Write(g.Bytes())
 	khash.Write(padg)
 	hash := khash.Sum(nil)
 	k := new(big.Int)
