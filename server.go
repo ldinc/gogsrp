@@ -33,37 +33,29 @@ func (server *Server) NewPrivateKey() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	sk := new(big.Int)
-	sk = sk.SetBytes(rnd)
+	sk := new(big.Int).SetBytes(rnd)
 
 	return sk, nil
 }
 
 func (server *Server) NewPublicKey(sk, verifier *big.Int) (*big.Int, error) {
+	Nbytes := server.N.Bytes()
+	gbytes := server.g.Bytes()
 	hash := server.newHash()
-	hash.Write(server.N.Bytes())
-	//TODO pad(g)
-	hash.Write(Pad(server.g.Bytes(), len(server.N.Bytes())))
-	k := new(big.Int)
-	k = k.SetBytes(hash.Sum(nil))
-	y := new(big.Int)
-	y = y.Exp(server.g, sk, server.N)
-	x := new(big.Int)
-	x = x.Mul(k, verifier)
-	pk := new(big.Int)
-	pk = pk.Add(x, y)
-	//TODO rem(pk, N)
+	hash.Write(Nbytes)
+	hash.Write(Pad(gbytes, len(Nbytes)))
+	k := new(big.Int).SetBytes(hash.Sum(nil))
+	y := new(big.Int).Exp(server.g, sk, server.N)
+	x := new(big.Int).Mul(k, verifier)
+	pk := new(big.Int).Add(x, y)
 	pk = pk.Rem(pk, server.N)
 	return pk, nil
 }
 
 func (server *Server) GetPremasterSecret(clientPK, serverPK, serverSK, verifier *big.Int) *big.Int {
 	u, _ := CommonHash(clientPK, serverPK, server.newHash)
-	y := new(big.Int)
-	y = y.Exp(verifier, u, server.N)
-	x := new(big.Int)
-	x = x.Mul(clientPK, y)
-	secret := new(big.Int)
-	secret = secret.Exp(x, serverSK, server.N)
+	y := new(big.Int).Exp(verifier, u, server.N)
+	x := new(big.Int).Mul(clientPK, y)
+	secret := new(big.Int).Exp(x, serverSK, server.N)
 	return secret
 }
