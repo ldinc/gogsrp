@@ -21,8 +21,7 @@ func CommonHash(clientPK, serverPK *big.Int, newHash func() hash.Hash) (*big.Int
 	hash := newHash()
 	hash.Write(Pad(clientBytes, len(serverBytes)))
 	hash.Write(Pad(serverBytes, len(clientBytes)))
-	u := new(big.Int)
-	u = u.SetBytes(hash.Sum(nil))
+	u := new(big.Int).SetBytes(hash.Sum(nil))
 	return u, nil
 }
 
