@@ -6,22 +6,20 @@ import (
 )
 
 type Client struct {
-	g          *big.Int
-	N          *big.Int
-	saltLength int
-	saltLen    uint
-	keyLen     uint
-	newHash    func() hash.Hash
+	g       *big.Int
+	N       *big.Int
+	saltLen int
+	keyLen  int
+	newHash func() hash.Hash
 }
 
-func CreateClient(g, N *big.Int, saltLength int, newHash func() hash.Hash) *Client {
+func CreateClient(g, N *big.Int, saltLen, keyLen int, newHash func() hash.Hash) *Client {
 	client := new(Client)
 	client.g = g
 	client.N = N
 	client.newHash = newHash
-	client.saltLength = saltLength
-	client.saltLen = uint(saltLength)
-	client.keyLen = 32
+	client.saltLen = saltLen
+	client.keyLen = keyLen
 
 	return client
 }

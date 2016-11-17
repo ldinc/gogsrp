@@ -74,7 +74,7 @@ func ExampleComputeServerPublicKey() {
 	x, _ := new(big.Int).SetString("94B7555AABE9127CC58CCF4993DB6CF84D16C124", 16)
 	v := new(big.Int).Exp(g, x, N)
 	//k, _ := new(big.Int).SetString("7556AA045AEF2CDD07ABAF0F665C3E818913186F", 16)
-	server := gogsrp.CreateServer(g, N, 32, sha1.New)
+	server := gogsrp.CreateServer(g, N, 32, 32, sha1.New)
 	b, _ := new(big.Int).SetString(bString, 16)
 	B, _ := server.NewPublicKey(b, v)
 	fmt.Printf("B = %X\n", B.Bytes())
@@ -85,7 +85,7 @@ func ExampleComputeServerPublicKey() {
 func ExampleComputeClientPublicKey() {
 	N, _ := new(big.Int).SetString(NString1024, 16)
 	g, _ := new(big.Int).SetString(gString1024, 16)
-	client := gogsrp.CreateClient(g, N, 32, sha1.New)
+	client := gogsrp.CreateClient(g, N, 32, 32, sha1.New)
 	a, _ := new(big.Int).SetString(aString, 16)
 	A, _ := client.NewPublicKey(a)
 	fmt.Printf("A = %X\n", A.Bytes())
@@ -99,7 +99,7 @@ func ExampleComputeClientPremasterSecret() {
 	a, _ := new(big.Int).SetString(aString, 16)
 	N, _ := new(big.Int).SetString(NString1024, 16)
 	A, _ := new(big.Int).SetString(AString, 16)
-	client := gogsrp.CreateClient(g, N, 32, sha1.New)
+	client := gogsrp.CreateClient(g, N, 32, 32, sha1.New)
 	premaster := client.GetPremasterSecret(A, a, B, salt, []byte(loginString), []byte(passwString))
 	fmt.Printf("secret = %X\n", premaster.Bytes())
 	// Output: secret = B0DC82BABCF30674AE450C0287745E7990A3381F63B387AAF271A10D233861E359B48220F7C4693C9AE12B0A6F67809F0876E2D013800D6C41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212DC346D7E474B29EDE8A469FFECA686E5A
@@ -113,7 +113,7 @@ func ExampleComputeServerPremasterSecret() {
 	N, _ := new(big.Int).SetString(NString1024, 16)
 	A, _ := new(big.Int).SetString(AString, 16)
 	v, _ := new(big.Int).SetString(vString, 16)
-	server := gogsrp.CreateServer(g, N, 32, sha1.New)
+	server := gogsrp.CreateServer(g, N, 32, 32, sha1.New)
 	premaster := server.GetPremasterSecret(A, B, b, v)
 	fmt.Printf("secret = %X\n", premaster.Bytes())
 	// Output: secret = B0DC82BABCF30674AE450C0287745E7990A3381F63B387AAF271A10D233861E359B48220F7C4693C9AE12B0A6F67809F0876E2D013800D6C41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212DC346D7E474B29EDE8A469FFECA686E5A

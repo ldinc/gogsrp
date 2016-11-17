@@ -6,22 +6,20 @@ import (
 )
 
 type Server struct {
-	g            *big.Int
-	N            *big.Int
-	randomLength int
-	saltLen      uint
-	keyLen       uint
-	newHash      func() hash.Hash
+	g       *big.Int
+	N       *big.Int
+	saltLen int
+	keyLen  int
+	newHash func() hash.Hash
 }
 
-func CreateServer(g, N *big.Int, randomLength int, newHash func() hash.Hash) *Server {
+func CreateServer(g, N *big.Int, saltLen, keyLen int, newHash func() hash.Hash) *Server {
 	server := new(Server)
 	server.g = g
 	server.N = N
 	server.newHash = newHash
-	server.randomLength = randomLength
-	server.saltLen = 32
-	server.keyLen = 32
+	server.saltLen = saltLen
+	server.keyLen = keyLen
 
 	return server
 }
