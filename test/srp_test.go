@@ -77,14 +77,46 @@ func ExampleComputeServerPublicKey() {
 	server := gogsrp.CreateServer(g, N, 32, sha1.New)
 	b, _ := new(big.Int).SetString(bString, 16)
 	B, _ := server.NewPublicKey(b, v)
-	//y := new(big.Int)
-	//y = y.Exp(g, b, N)
-	//xx := new(big.Int).Mul(k, v)
-	//pk := new(big.Int)
-	//pk = pk.Add(xx, y)
-	/*B = pk.Rem(pk, N)*/
 	fmt.Printf("B = %X\n", B.Bytes())
 	// Output: B = BD0C61512C692C0CB6D041FA01BB152D4916A1E77AF46AE105393011BAF38964DC46A0670DD125B95A981652236F99D9B681CBF87837EC996C6DA04453728610D0C6DDB58B318885D7D82C7F8DEB75CE7BD4FBAA37089E6F9C6059F388838E7A00030B331EB76840910440B1B27AAEAEEB4012B7D7665238A8E3FB004B117B58
+}
+
+// A = g^a % N
+func ExampleComputeClientPublicKey() {
+	N, _ := new(big.Int).SetString(NString1024, 16)
+	g, _ := new(big.Int).SetString(gString1024, 16)
+	client := gogsrp.CreateClient(g, N, 32, sha1.New)
+	a, _ := new(big.Int).SetString(aString, 16)
+	A, _ := client.NewPublicKey(a)
+	fmt.Printf("A = %X\n", A.Bytes())
+	// Output: A = 61D5E490F6F1B79547B0704C436F523DD0E560F0C64115BB72557EC44352E8903211C04692272D8B2D1A5358A2CF1B6E0BFCF99F921530EC8E39356179EAE45E42BA92AEACED825171E1E8B9AF6D9C03E1327F44BE087EF06530E69F66615261EEF54073CA11CF5858F0EDFDFE15EFEAB349EF5D76988A3672FAC47B0769447B
+}
+
+// client premaster secret = (B - (k * g^x)) ^ (a + (u * x)) % N
+func ExampleComputeClientPremasterSecret() {
+	B, _ := new(big.Int).SetString(BString, 16)
+	g, _ := new(big.Int).SetString(gString1024, 16)
+	a, _ := new(big.Int).SetString(aString, 16)
+	N, _ := new(big.Int).SetString(NString1024, 16)
+	A, _ := new(big.Int).SetString(AString, 16)
+	client := gogsrp.CreateClient(g, N, 32, sha1.New)
+	premaster := client.GetPremasterSecret(A, a, B, salt, []byte(loginString), []byte(passwString))
+	fmt.Printf("secret = %X\n", premaster.Bytes())
+	// Output: secret = B0DC82BABCF30674AE450C0287745E7990A3381F63B387AAF271A10D233861E359B48220F7C4693C9AE12B0A6F67809F0876E2D013800D6C41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212DC346D7E474B29EDE8A469FFECA686E5A
+}
+
+// server premaster secret = (A * v^u) ^ b % N
+func ExampleComputeServerPremasterSecret() {
+	B, _ := new(big.Int).SetString(BString, 16)
+	g, _ := new(big.Int).SetString(gString1024, 16)
+	b, _ := new(big.Int).SetString(bString, 16)
+	N, _ := new(big.Int).SetString(NString1024, 16)
+	A, _ := new(big.Int).SetString(AString, 16)
+	v, _ := new(big.Int).SetString(vString, 16)
+	server := gogsrp.CreateServer(g, N, 32, sha1.New)
+	premaster := server.GetPremasterSecret(A, B, b, v)
+	fmt.Printf("secret = %X\n", premaster.Bytes())
+	// Output: secret = B0DC82BABCF30674AE450C0287745E7990A3381F63B387AAF271A10D233861E359B48220F7C4693C9AE12B0A6F67809F0876E2D013800D6C41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212DC346D7E474B29EDE8A469FFECA686E5A
 }
 
 func computeHashedSaltedId(salt, login, passw []byte) *big.Int {
