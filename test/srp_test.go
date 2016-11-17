@@ -119,6 +119,24 @@ func ExampleComputeServerPremasterSecret() {
 	// Output: secret = B0DC82BABCF30674AE450C0287745E7990A3381F63B387AAF271A10D233861E359B48220F7C4693C9AE12B0A6F67809F0876E2D013800D6C41BB59B6D5979B5C00A172B4A2A5903A0BDCAF8A709585EB2AFAFA8F3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212DC346D7E474B29EDE8A469FFECA686E5A
 }
 
+func ExampleComputeSessionKey() {
+	secret, _ := new(big.Int).SetString(sString, 16)
+	key := gogsrp.SessionKey(secret, sha1.New)
+	fmt.Printf("session key = %X\n", key)
+	// Output: session key = 017EEFA1CEFC5C2E626E21598987F31E0F1B11BB
+}
+
+func ExampleComputeExchangeMessage() {
+	sessionKey := []byte{0x01, 0x7E, 0xEF, 0xA1, 0xCE, 0xFC, 0x5C, 0x2E, 0x62, 0x6E, 0x21, 0x59, 0x89, 0x87, 0xF3, 0x1E, 0x0F, 0x1B, 0x11, 0xBB}
+	B, _ := new(big.Int).SetString(BString, 16)
+	g, _ := new(big.Int).SetString(gString1024, 16)
+	N, _ := new(big.Int).SetString(NString1024, 16)
+	A, _ := new(big.Int).SetString(AString, 16)
+	msg := gogsrp.ExchangeMessage([]byte(loginString), salt, sessionKey, g, N, A, B, sha1.New)
+	fmt.Printf("exchange message = %X\n", msg)
+	// Output: exchange message = 3F3BC67169EA71302599CF1B0F5D408B7B65D347
+}
+
 func computeHashedSaltedId(salt, login, passw []byte) *big.Int {
 	id := sha1.New()
 	id.Write(login)
