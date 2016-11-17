@@ -1,7 +1,9 @@
 package test
 
 import (
+	"bytes"
 	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"github.com/ldinc/gogsrp"
 	"math/big"
@@ -135,6 +137,31 @@ func ExampleComputeExchangeMessage() {
 	msg := gogsrp.ExchangeMessage([]byte(loginString), salt, sessionKey, g, N, A, B, sha1.New)
 	fmt.Printf("exchange message = %X\n", msg)
 	// Output: exchange message = 3F3BC67169EA71302599CF1B0F5D408B7B65D347
+}
+
+func ExampleClientServer() {
+	g, _ := new(big.Int).SetString(gString4096, 16)
+	N, _ := new(big.Int).SetString(NString4096, 16)
+	saltLen := 64
+	keyLen := 64
+	client := gogsrp.CreateClient(g, N, saltLen, keyLen, sha256.New)
+	server := gogsrp.CreateServer(g, N, saltLen, keyLen, sha256.New)
+	login := []byte("test-login")
+	passw := []byte("test-password")
+	s, v, _ := client.NewVerifier(login, passw)
+	clientSK, _ := client.NewPrivateKey()
+	clientPK, _ := client.NewPublicKey(clientSK)
+	serverSK, _ := server.NewPrivateKey()
+	serverPK, _ := server.NewPublicKey(serverSK, v)
+	clientPremaster := client.GetPremasterSecret(clientPK, clientSK, serverPK, s, login, passw)
+	serverPremaster := server.GetPremasterSecret(clientPK, serverPK, serverSK, v)
+	clientSessionKey := gogsrp.SessionKey(clientPremaster, sha256.New)
+	serverSessionKey := gogsrp.SessionKey(serverPremaster, sha256.New)
+	clientMsg := gogsrp.ExchangeMessage(login, s, clientSessionKey, g, N, clientPK, serverPK, sha256.New)
+	serverMsg := gogsrp.ExchangeMessage(login, s, serverSessionKey, g, N, clientPK, serverPK, sha256.New)
+	// not cryptostrong check...
+	fmt.Println(bytes.Compare(serverMsg, clientMsg) == 0)
+	// Output: true
 }
 
 func computeHashedSaltedId(salt, login, passw []byte) *big.Int {
