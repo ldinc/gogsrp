@@ -128,15 +128,15 @@ func ExampleComputeSessionKey() {
 	// Output: session key = 017EEFA1CEFC5C2E626E21598987F31E0F1B11BB
 }
 
-func ExampleComputeExchangeMessage() {
+func ExampleComputeClientMessage() {
 	sessionKey := []byte{0x01, 0x7E, 0xEF, 0xA1, 0xCE, 0xFC, 0x5C, 0x2E, 0x62, 0x6E, 0x21, 0x59, 0x89, 0x87, 0xF3, 0x1E, 0x0F, 0x1B, 0x11, 0xBB}
 	B, _ := new(big.Int).SetString(BString, 16)
 	g, _ := new(big.Int).SetString(gString1024, 16)
 	N, _ := new(big.Int).SetString(NString1024, 16)
 	A, _ := new(big.Int).SetString(AString, 16)
-	msg := gogsrp.ExchangeMessage([]byte(loginString), salt, sessionKey, g, N, A, B, sha1.New)
-	fmt.Printf("exchange message = %X\n", msg)
-	// Output: exchange message = 3F3BC67169EA71302599CF1B0F5D408B7B65D347
+	msg := gogsrp.ClientMessage([]byte(loginString), salt, sessionKey, g, N, A, B, sha1.New)
+	fmt.Printf("client message = %X\n", msg)
+	// Output: client message = 3F3BC67169EA71302599CF1B0F5D408B7B65D347
 }
 
 func ExampleClientServer() {
@@ -157,10 +157,14 @@ func ExampleClientServer() {
 	serverPremaster := server.GetPremasterSecret(clientPK, serverPK, serverSK, v)
 	clientSessionKey := gogsrp.SessionKey(clientPremaster, sha256.New)
 	serverSessionKey := gogsrp.SessionKey(serverPremaster, sha256.New)
-	clientMsg := gogsrp.ExchangeMessage(login, s, clientSessionKey, g, N, clientPK, serverPK, sha256.New)
-	serverMsg := gogsrp.ExchangeMessage(login, s, serverSessionKey, g, N, clientPK, serverPK, sha256.New)
-	// not cryptostrong check...
-	fmt.Println(bytes.Compare(serverMsg, clientMsg) == 0)
+	cMsgOnClient := gogsrp.ClientMessage(login, s, clientSessionKey, g, N, clientPK, serverPK, sha256.New)
+	cMsgOnServer := gogsrp.ClientMessage(login, s, serverSessionKey, g, N, clientPK, serverPK, sha256.New)
+	// not cryptostrong check... just for lib test
+	clientValid := bytes.Compare(cMsgOnClient, cMsgOnServer) == 0
+	sMsgOnClient := gogsrp.ServerMessage(clientPK, cMsgOnServer, serverSessionKey, sha256.New)
+	sMsgOnServer := gogsrp.ServerMessage(clientPK, cMsgOnClient, clientSessionKey, sha256.New)
+	serverValid := bytes.Compare(sMsgOnClient, sMsgOnServer) == 0
+	fmt.Println(clientValid && serverValid)
 	// Output: true
 }
 
