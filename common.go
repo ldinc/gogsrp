@@ -31,7 +31,8 @@ func SessionKey(premasterSecret *big.Int, newHash func() hash.Hash) []byte {
 	return hash.Sum(nil)
 }
 
-func ExchangeMessage(login, salt, sessionKey []byte, g, N, clientPK, serverPK *big.Int, newHash func() hash.Hash) []byte {
+// clientMsg :=  H(H(N) xor H(g) | H(login) | salt | clientPK | serverPK | sessionKey)
+func ClientMessage(login, salt, sessionKey []byte, g, N, clientPK, serverPK *big.Int, newHash func() hash.Hash) []byte {
 	hash := newHash()
 	hash.Write(g.Bytes())
 	hashedG := hash.Sum(nil)
@@ -56,4 +57,14 @@ func ExchangeMessage(login, salt, sessionKey []byte, g, N, clientPK, serverPK *b
 	hash.Write(sessionKey)
 
 	return hash.Sum(nil)
+}
+
+// serverMsg := H(clientPK | clientMsg | sessionKey)
+func ServerMessage(clientPK *big.Int, clientMsg, sessionKey []byte, newHash func() hash.Hash) []byte {
+	hash := newHash()
+	hash.Write(clientPK.Bytes())
+	hash.Write(clientMsg)
+	hash.Write(sessionKey)
+	return hash.Sum(nil)
+	return nil
 }
